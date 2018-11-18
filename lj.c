@@ -141,6 +141,54 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
                         unsigned int seedrow_count, unsigned int run_count,
                         uint8_t *new_color)
 {
+    uint8_t byte;
+
+    byte = 32 * location;
+    if (seedrow_count <= 2)
+        byte = 8 * seedrow_count | byte;
+    else
+        byte = byte | 0x18;
+
+    if (run_count <= 6)
+        byte = run_count | byte;
+    else
+        byte = byte | 7;
+
+    outptr = write_comp_byte(byte, outptr, pastoutmem);
+    if(!outptr)
+        return NULL;
+
+    outptr = encode_count(seedrow_count, 3, outptr, pastoutmem);
+    if(!outptr)
+        return NULL;
+
+    if(location == 0) {
+        outptr = write_comp_byte(new_color[0], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(new_color[1], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(new_color[2], outptr, pastoutmem);
+        if(!outptr) return NULL;
+    }
+    
+    if(run_count >= 7) {
+        for(int i=0; i <= 6; i++) {
+            outptr = write_comp_byte(color_ptr[0], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            outptr = write_comp_byte(color_ptr[1], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            outptr = write_comp_byte(color_ptr[2], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            color_ptr += 3;
+        }
+        // TODO: figure out the run_count encoding loop with memcpy(color_ptr)
+        if(!outptr)
+            return NULL;
+    } else {
+    }
+
+
+
     return outptr;
 }
 
