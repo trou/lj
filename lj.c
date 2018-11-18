@@ -43,27 +43,30 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
     return 0;
 }
 
-#define LTEST_W             colidx > 0
-#define LVAL_W(colidx)      cur_row[colidx-1]
-#define LTEST_NW            colidx > 0
-#define LVAL_NW(colidx)     seedrow[colidx-1]
-#define LTEST_WW            colidx > 1
-#define LVAL_WW(colidx)     cur_row[colidx-2]
-#define LTEST_NWW           colidx > 1
-#define LVAL_NWW(colidx)    seedrow[colidx-2]
-#define LTEST_NE            (colidx+1) < uiLogicalImageWidth
-#define LVAL_NE(colidx)     seedrow[colidx+1]
-#define LTEST_NEWCOL        1
-#define LVAL_NEWCOL(colidx) new_color
-#define LTEST_CACHE         1
-#define LVAL_CACHE(colidx)  cache
+uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
+{
+    uint8_t byte;
+    uint8_t *result;
 
-#define LOC1TEST      LTEST_NE
-#define LOC1VAL(colidx)  LVAL_NE(colidx)
-#define LOC2TEST      LTEST_NW
-#define LOC2VAL(colidx)  LVAL_NW(colidx)
-#define LOC3TEST      LTEST_NEWCOL
-#define LOC3VAL(colidx)  LVAL_NEWCOL(colidx)
+    if(repl_cnt < 3) {
+        byte = 0x80 | (8*repl_cnt);
+    } else {
+        byte = 0x98;
+    }
+    result = write_comp_byte(byte, outptr, pastoutmem);
+
+    if(!result)
+        return NULL;
+    if(repl_cnt > 2) {
+        char i;
+
+        for(i=repl_cnt-3; i > -2; i -= 3)
+            *result++ = 0xFF;
+        *result++ = (uint8_t) i;
+    }
+    
+    return result;
+}
 
 int HPJetReadyCompress(unsigned char   *pCompressedData,
                    uint32_t        *pCompressedDataLen,
@@ -75,8 +78,10 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
     unsigned char *seedrow;
     uint8_t *cur_row;
     uint8_t *pCompressedDataEnd = &pCompressedData[*pCompressedDataLen];
+    uint8_t *pCompressedDataOrig = pCompressedData;
     int colidx, seedrow_count, coldata_idx, location, run_count;
     uint8_t new_color[3], cache[3];
+
 
     if(InputData)
     {
@@ -144,13 +149,45 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                                                          location, seedrow_count, run_count, new_color);
 
                     } else {
+                        /* Got a run ?*/
+                        run_count = 0;
+                        colidx++;
+                        coldata_idx += 3;
+                        while(colidx+1 < uiLogicalImageWidth &&
+                              !memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
+                            run_count++;
+                            coldata_idx += 3;
+                            coldata_idx++;
+                        }
+                        coldata_idx += 3;
+                        coldata_idx++;
+                        pCompressedData = encode_runcmd(pCompressedData, pCompressedDataEnd,
+                                                        location, seedrow_count, run_count, new_color);
                     }
-
+                    memcpy(cache, &cur_row[coldata_idx-3], 3);
                 }
+                seedrow = &InputData[3*uiLogicalImageWidth*lineidx];
             }
+            if(seedrow)
+                free(seedrow);
+            if(pCompressedData <= pCompressedDataEnd) {
+                *pCompressedDataLen = pCompressedDataOrig - pCompressedData;
+                result = 0;
+            } else {
+                *pCompressedDataLen = 0;
+                result = -1;
+            }
+
         } else {
             result = -2;
         }
+    } else {
+        /* No input data */
+        for(int i=0; i < uiLogicalImageHeight; i++) {
+            pCompressedData = encode_seedcmd(pCompressedData, pCompressedDataEnd, uiLogicalImageWidth);
+        }
+        *pCompressedDataLen = pCompressedDataOrig - pCompressedData;
+        result = 0;
     }
     return result;
 }
