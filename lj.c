@@ -43,29 +43,105 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
     return 0;
 }
 
+/* Reimplemented macro as function */
+uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
+
+{
+    if(outptr >= pastoutmem)
+        return NULL;
+    *outptr++ = val;
+    return outptr;
+}
+
+uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
+{
+    /* TODO: verify it's sound */
+    if(count >= over) {
+        count -= over;
+        if(count <= 253) {
+            outptr = write_comp_byte(count, outptr, pastoutmem);
+        } else if(count <= (254+255)) {
+            if(outptr + 1 >= pastoutmem)
+                return NULL;
+            outptr = write_comp_byte(0xFE, outptr, pastoutmem);
+            outptr = write_comp_byte(count-0xFE, outptr, pastoutmem);
+        } else {
+            if(outptr + 2 >= pastoutmem)
+                return NULL;
+            count -= 0xFF;
+            if(count > 0xFFFF)
+                return NULL;
+            outptr = write_comp_byte(0xFF, outptr, pastoutmem);
+            outptr = write_comp_byte(count >> 8, outptr, pastoutmem);
+            outptr = write_comp_byte((count&0xFF), outptr, pastoutmem);
+        }
+    }
+    return outptr;
+}
+
 uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 {
     uint8_t byte;
-    uint8_t *result;
 
     if(repl_cnt < 3) {
         byte = 0x80 | (8*repl_cnt);
     } else {
         byte = 0x98;
     }
-    result = write_comp_byte(byte, outptr, pastoutmem);
 
-    if(!result)
+    outptr = write_comp_byte(byte, outptr, pastoutmem);
+
+    if(!outptr)
         return NULL;
-    if(repl_cnt > 2) {
-        char i;
 
-        for(i=repl_cnt-3; i > -2; i -= 3)
-            *result++ = 0xFF;
-        *result++ = (uint8_t) i;
+    outptr = encode_count(repl_cnt, 3, outptr, pastoutmem);
+    return outptr;
+}
+
+uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsigned int seedrow_count, unsigned int run_count, uint8_t *new_color) {
+    uint8_t byte;
+
+    if ( seedrow_count <= 2 )
+        byte = 8 * seedrow_count | 32 * location | 0x80;
+    else
+        byte = 32 * location | 0x98;
+
+    if(run_count <= 6)
+        byte |= run_count;
+    else
+        byte |= 7;
+
+    outptr = write_comp_byte(byte, outptr, pastoutmem);
+    if(!outptr)
+        return NULL;
+
+    outptr = encode_count(seedrow_count, 3, outptr, pastoutmem);
+    if(!outptr)
+        return NULL;
+
+    /* if required, write out color of first pixel */
+    if(location == 0) {
+        outptr = write_comp_byte(new_color[0], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(new_color[1], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(new_color[2], outptr, pastoutmem);
+        if(!outptr) return NULL;
     }
-    
-    return result;
+
+    outptr = encode_count(run_count, 7, outptr, pastoutmem);
+    if(!outptr)
+        return NULL;
+
+    return outptr;
+}
+
+uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
+                        uint8_t *color_ptr, int location,
+                        unsigned int seedrow_count, unsigned int run_count,
+                        uint8_t *new_color)
+{
+    return outptr;
 }
 
 int HPJetReadyCompress(unsigned char   *pCompressedData,
