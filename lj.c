@@ -1,8 +1,13 @@
 #include <jbig.h>
+#include <string.h>
 #include "hpjbig_wrapper.h"
 
-void hpOutputBie(unsigned char *start, size_t len, void *file)
+void hpOutputBie(unsigned char *start, size_t len, void *output)
 {
+    HPLJZjcBuff *outbuf = (HPLJZjcBuff *)output;
+    memcpy(&outbuf->pszCompressedData[outbuf->dwTotalSize],
+           start, len);
+    outbuf->dwTotalSize += len;
 }
 
 int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZjcBuff *pOutBuff, HPLJZjsJbgEncSt *pJbgEncSt)
