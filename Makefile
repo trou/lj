@@ -1,5 +1,5 @@
 CC:=gcc
-COPTS:=-O2 -Wall -Werror -fPIC -std=gnu11 -ggdb
+COPTS:=-O0 -Wall -Werror -fPIC -std=gnu11 -ggdb
 
 lj.so: lj.c
 	$(CC) $(COPTS) -shared -ljbig -o lj.so lj.c

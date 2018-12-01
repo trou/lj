@@ -1,8 +1,17 @@
+#include <stdio.h>
 #include <jbig.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include "hpjbig_wrapper.h"
+
+void hexdump(char *prefix, uint8_t *buffer, int len)
+{
+    printf("%s", prefix);
+    for(int i=0; i<len; i++)
+        printf(" %02X", buffer[i]);
+    printf("\n");
+}
 
 int hp_init_lib(int iFlags)
 {
@@ -47,6 +56,7 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
 uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 {
+    printf("write_comp_byte: %d / 0x%02x\n", val, val);
     if(outptr >= pastoutmem)
         return NULL;
     *outptr++ = val;
@@ -55,6 +65,7 @@ uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
 {
+    printf("encode_count(%d, %d)\n", count, over); 
     /* TODO: verify it's sound */
     if(count >= over) {
         count -= over;
@@ -76,6 +87,7 @@ uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
             outptr = write_comp_byte((count&0xFF), outptr, pastoutmem);
         }
     }
+    printf("encode_count end\n");
     return outptr;
 }
 
@@ -101,6 +113,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsigned int seedrow_count, unsigned int run_count, uint8_t *new_color) {
     uint8_t byte;
 
+    printf("encode_runcmd(%d, %u, %u)\n", location, seedrow_count, run_count); 
     if ( seedrow_count <= 2 )
         byte = 8 * seedrow_count | 32 * location | 0x80;
     else
@@ -142,6 +155,8 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
                         uint8_t *new_color)
 {
     uint8_t byte;
+
+    printf("encode_literal(%d, %u, %u)\n", location, seedrow_count, run_count); 
 
     byte = 32 * location;
     if (seedrow_count <= 2)
@@ -185,10 +200,18 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
         if(!outptr)
             return NULL;
     } else {
+        for(int i=0; i < run_count; i++) {
+            outptr = write_comp_byte(color_ptr[0], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            outptr = write_comp_byte(color_ptr[1], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            outptr = write_comp_byte(color_ptr[2], outptr, pastoutmem);
+            if(!outptr) return NULL;
+            color_ptr += 3;
+        }
     }
 
-
-
+    printf("encode_literal end\n");
     return outptr;
 }
 
@@ -222,6 +245,8 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                 coldata_idx = 0;
                 while(colidx < uiLogicalImageWidth) {
                     seedrow_count = 0;
+                    hexdump("currow:", &cur_row[coldata_idx], 10);
+                    hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     while(colidx < uiLogicalImageWidth &&
                           cur_row[coldata_idx] == seedrow[coldata_idx] &&
                           cur_row[coldata_idx + 1] == seedrow[coldata_idx + 1] &&
@@ -255,6 +280,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                     /* Looking for runs */
                     if(colidx + 1 >= uiLogicalImageWidth ||
                         memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx+3], 3)) {
+                        printf("no run!\n");
                         /* No run found */
                         run_count = 0;
                         uint8_t *color_ptr = &cur_row[coldata_idx+3];
@@ -262,8 +288,8 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                         coldata_idx += 3;
                         colidx++;
                         while(colidx+1 < uiLogicalImageWidth &&
-                              !memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx+3], 3) &&
-                              !memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx], 3)) {
+                              memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3) &&
+                              memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx], 3)) {
                             // TODO: make sure the while check is sound
                             run_count++;
                             colidx++;
@@ -274,6 +300,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
                     } else {
                         /* Got a run ?*/
+                        printf("run!\n");
                         run_count = 0;
                         colidx++;
                         coldata_idx += 3;
