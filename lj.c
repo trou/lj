@@ -245,6 +245,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                 coldata_idx = 0;
                 while(colidx < uiLogicalImageWidth) {
                     seedrow_count = 0;
+                    printf("coldata_idx: %x\n", coldata_idx);
                     hexdump("currow:", &cur_row[coldata_idx], 10);
                     hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     while(colidx < uiLogicalImageWidth &&
@@ -277,9 +278,13 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                         location = 2;
                     }
 
+                    printf("location: %d\n", location);
+                    printf("coldata_idx: %x\n", coldata_idx);
+                    hexdump("currow:", &cur_row[coldata_idx], 10);
+                    hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     /* Looking for runs */
                     if(colidx + 1 >= uiLogicalImageWidth ||
-                        memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx+3], 3)) {
+                        memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
                         printf("no run!\n");
                         /* No run found */
                         run_count = 0;
