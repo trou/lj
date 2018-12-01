@@ -9,3 +9,5 @@ test_jbig: test_jbig.c
 	
 test_jpeg: test_jpeg.c
 	$(CC) $(COPTS) -o test_jpeg -ldl test_jpeg.c
+
+all: test_jpeg lj.so test_jbig

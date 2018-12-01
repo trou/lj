@@ -65,7 +65,7 @@ uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
 {
-    printf("encode_count(%d, %d)\n", count, over); 
+    printf("encode_count(%d, %d)\n", count, over);
     /* TODO: verify it's sound */
     if(count >= over) {
         count -= over;
@@ -113,7 +113,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsigned int seedrow_count, unsigned int run_count, uint8_t *new_color) {
     uint8_t byte;
 
-    printf("encode_runcmd(%d, %u, %u)\n", location, seedrow_count, run_count); 
+    printf("encode_runcmd(%d, %u, %u)\n", location, seedrow_count, run_count);
     if ( seedrow_count <= 2 )
         byte = 8 * seedrow_count | 32 * location | 0x80;
     else
@@ -156,7 +156,8 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
 {
     uint8_t byte;
 
-    printf("encode_literal(%d, %u, %u)\n", location, seedrow_count, run_count); 
+    printf("encode_literal(%d, %u, %u)\n", location, seedrow_count, run_count);
+    hexdump("new_color:", new_color, 3);
 
     byte = 32 * location;
     if (seedrow_count <= 2)
@@ -185,7 +186,7 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
         outptr = write_comp_byte(new_color[2], outptr, pastoutmem);
         if(!outptr) return NULL;
     }
-    
+
     if(run_count >= 7) {
         for(int i=0; i <= 6; i++) {
             outptr = write_comp_byte(color_ptr[0], outptr, pastoutmem);
@@ -196,19 +197,20 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
             if(!outptr) return NULL;
             color_ptr += 3;
         }
+
+        outptr = encode_count(run_count, 7, outptr, pastoutmem);
         // TODO: figure out the run_count encoding loop with memcpy(color_ptr)
         if(!outptr)
             return NULL;
-    } else {
-        for(int i=0; i < run_count; i++) {
-            outptr = write_comp_byte(color_ptr[0], outptr, pastoutmem);
-            if(!outptr) return NULL;
-            outptr = write_comp_byte(color_ptr[1], outptr, pastoutmem);
-            if(!outptr) return NULL;
-            outptr = write_comp_byte(color_ptr[2], outptr, pastoutmem);
-            if(!outptr) return NULL;
-            color_ptr += 3;
-        }
+    }
+    for(int i=0; i < run_count; i++) {
+        outptr = write_comp_byte(color_ptr[0], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(color_ptr[1], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        outptr = write_comp_byte(color_ptr[2], outptr, pastoutmem);
+        if(!outptr) return NULL;
+        color_ptr += 3;
     }
 
     printf("encode_literal end\n");
@@ -313,21 +315,21 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                               !memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
                             run_count++;
                             coldata_idx += 3;
-                            coldata_idx++;
+                            colidx++;
                         }
                         coldata_idx += 3;
-                        coldata_idx++;
+                        colidx++;
                         pCompressedData = encode_runcmd(pCompressedData, pCompressedDataEnd,
                                                         location, seedrow_count, run_count, new_color);
                     }
                     memcpy(cache, &cur_row[coldata_idx-3], 3);
                 }
-                seedrow = &InputData[3*uiLogicalImageWidth*lineidx];
+                memcpy(seedrow, &InputData[3*uiLogicalImageWidth*lineidx], 3*uiLogicalImageWidth);
             }
             if(seedrow)
                 free(seedrow);
             if(pCompressedData <= pCompressedDataEnd) {
-                *pCompressedDataLen = pCompressedDataOrig - pCompressedData;
+                *pCompressedDataLen =  pCompressedData-pCompressedDataOrig;
                 result = 0;
             } else {
                 *pCompressedDataLen = 0;
@@ -342,7 +344,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
         for(int i=0; i < uiLogicalImageHeight; i++) {
             pCompressedData = encode_seedcmd(pCompressedData, pCompressedDataEnd, uiLogicalImageWidth);
         }
-        *pCompressedDataLen = pCompressedDataOrig - pCompressedData;
+        *pCompressedDataLen = pCompressedData - pCompressedDataOrig ;
         result = 0;
     }
     return result;

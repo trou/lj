@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdint.h>
 #include "hpjbig_wrapper.h"
 
@@ -19,6 +20,7 @@ int main(int argc, char *argv[])
 {
     void *libhdl = NULL;
     int input_fd = 0;
+    int out_fd = 0;
     int res = 0;
     uint8_t *input_mmap = NULL;
     uint8_t *output_buffer;
@@ -79,6 +81,17 @@ int main(int argc, char *argv[])
     res = HPJetReadyCompress(output_buffer, &out_buffer_size, input_mmap, width, height);
     printf("%d\n", res);
     printf("out_buffer_size = %u\n", out_buffer_size);
+
+    if(out_buffer_size < 0x80000000) {
+        out_fd = open(argv[5], O_RDWR|O_TRUNC|O_CREAT, 0600);
+        write(out_fd, output_buffer, out_buffer_size);
+        close(out_fd);
+    }
+
+    free(output_buffer);
+    munmap(input_mmap, input_stat.st_size);
+    close(input_fd);
+
 
     return 0;
 }
