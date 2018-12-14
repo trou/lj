@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     int width = 0, height = 0;
 
     if(argc < 5) {
-        printf("Usage: test lib.so input_file width height\n");
+        printf("Usage: test lib.so input_file width height [output]\n");
         return 1;
     }
 
@@ -79,17 +79,29 @@ int main(int argc, char *argv[])
     }
     hp_init_lib(0);
 
-    output_buffer.pszCompressedData = (uint8_t *) malloc(input_stat.st_size);
+    output_buffer.pszCompressedData = (uint8_t *) malloc(input_stat.st_size*2);
     output_buffer.dwTotalSize = 0;
     if(output_buffer.pszCompressedData == NULL) {
         perror("Could not allocate output buffer\n");
         return 1;
     }
+    memset(output_buffer.pszCompressedData, 0, input_stat.st_size*2);
     printf("Encoding data: ");
     res = hp_encode_bits_to_jbig(width, height, &input_mmap, &output_buffer,
                            &state);
     printf("%d\n", res);
     printf("dwTotalSize = %lu\n", output_buffer.dwTotalSize);
+
+    if(argc == 6) {
+        FILE *result = fopen(argv[5], "wb+");
+        if(!result)
+        {
+            perror("Could not open output file\n");
+            return -1;
+        }
+        fwrite(output_buffer.pszCompressedData, 1, output_buffer.dwTotalSize, result);
+        fclose(result);
+    }
 
     return 0;
 }
