@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "hpjbig_wrapper.h"
+unsigned char *orig = NULL;
 
 void hexdump(char *prefix, uint8_t *buffer, int len)
 {
@@ -56,7 +57,7 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
 uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 {
-    printf("write_comp_byte: %d / 0x%02x\n", val, val);
+    printf("write_comp_byte[%lx]: %d / 0x%02x\n", outptr-orig, val, val);
     if(outptr >= pastoutmem)
         return NULL;
     *outptr++ = val;
@@ -231,6 +232,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
     int colidx, seedrow_count, coldata_idx, location, run_count;
     uint8_t new_color[3], cache[3];
 
+    orig = pCompressedData;
 
     if(InputData)
     {
@@ -247,7 +249,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                 coldata_idx = 0;
                 while(colidx < uiLogicalImageWidth) {
                     seedrow_count = 0;
-                    printf("coldata_idx: %x\n", coldata_idx);
+                    printf("colidx: %x, coldata_idx: %x\n", colidx, coldata_idx);
                     hexdump("currow:", &cur_row[coldata_idx], 10);
                     hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     while(colidx < uiLogicalImageWidth &&
