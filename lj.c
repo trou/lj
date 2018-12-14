@@ -143,9 +143,17 @@ uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsig
         if(!outptr) return NULL;
     }
 
-    outptr = encode_count(run_count, 7, outptr, pastoutmem);
-    if(!outptr)
-        return NULL;
+    if(run_count > 6){
+        run_count -= 7;
+        while(run_count > 0xFE) {
+            run_count -= 0xFF;
+            outptr = write_comp_byte(0xFF, outptr, pastoutmem);
+            if(!outptr) return NULL;
+        }
+        outptr = write_comp_byte((run_count & 0xFF), outptr, pastoutmem);
+        if(!outptr)
+            return NULL;
+    }
 
     return outptr;
 }
@@ -200,6 +208,7 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
         }
 
         outptr = encode_count(run_count, 7, outptr, pastoutmem);
+        run_count %= 7;
         // TODO: figure out the run_count encoding loop with memcpy(color_ptr)
         if(!outptr)
             return NULL;
@@ -296,7 +305,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
                         coldata_idx += 3;
                         colidx++;
-                        while(colidx+1 < uiLogicalImageWidth &&
+                        while(colidx+1 <= uiLogicalImageWidth &&
                               memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3) &&
                               memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx], 3)) {
                             // TODO: make sure the while check is sound
@@ -313,7 +322,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                         run_count = 0;
                         colidx++;
                         coldata_idx += 3;
-                        while(colidx+1 < uiLogicalImageWidth &&
+                        while(colidx+1 <= uiLogicalImageWidth &&
                               !memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
                             run_count++;
                             coldata_idx += 3;
