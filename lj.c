@@ -114,6 +114,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 {
     uint8_t byte;
 
+    printf("encode_seedcmd(%d)\n", repl_cnt);
     if(repl_cnt < 3) {
         byte = 0x80 | (8*repl_cnt);
     } else {
@@ -126,6 +127,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
         return NULL;
 
     outptr = encode_count2(repl_cnt, 3, outptr, pastoutmem);
+    printf("encode_seedcmd end\n");
     return outptr;
 }
 
@@ -272,7 +274,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                 coldata_idx = 0;
                 while(colidx < uiLogicalImageWidth) {
                     seedrow_count = 0;
-                    printf("colidx: %x, coldata_idx: %x\n", colidx, coldata_idx);
+                    printf("colidx: %x, coldata_idx: %x, lineidx=%x\n", colidx, coldata_idx, lineidx);
                     hexdump("currow:", &cur_row[coldata_idx], 10);
                     hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     while(colidx < uiLogicalImageWidth &&
@@ -332,7 +334,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
                     } else {
                         /* Got a run ?*/
-                        printf("run!\n");
+                        printf("run: colidx=%x!\n", colidx);
                         run_count = 0;
                         colidx++;
                         coldata_idx += 3;
