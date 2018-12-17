@@ -92,6 +92,24 @@ uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
     return outptr;
 }
 
+uint8_t *encode_count2(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
+{
+    printf("encode_count2(%d, %d)\n", count, over);
+    if (count >= over) {
+        count -= over;
+        while(count > 0xFE) {
+            count -= 0xFF;
+            outptr = write_comp_byte(0xFF, outptr, pastoutmem);
+            if(!outptr) return NULL;
+        }
+        outptr = write_comp_byte((count & 0xFF), outptr, pastoutmem);
+        if(!outptr)
+            return NULL;
+    }
+    printf("encode_count2 end\n");
+    return outptr;
+}
+
 uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 {
     uint8_t byte;
@@ -107,7 +125,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
     if(!outptr)
         return NULL;
 
-    outptr = encode_count(repl_cnt, 3, outptr, pastoutmem);
+    outptr = encode_count2(repl_cnt, 3, outptr, pastoutmem);
     return outptr;
 }
 
@@ -129,7 +147,7 @@ uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsig
     if(!outptr)
         return NULL;
 
-    outptr = encode_count(seedrow_count, 3, outptr, pastoutmem);
+    outptr = encode_count2(seedrow_count, 3, outptr, pastoutmem);
     if(!outptr)
         return NULL;
 
@@ -143,18 +161,7 @@ uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsig
         if(!outptr) return NULL;
     }
 
-    if(run_count > 6){
-        run_count -= 7;
-        while(run_count > 0xFE) {
-            run_count -= 0xFF;
-            outptr = write_comp_byte(0xFF, outptr, pastoutmem);
-            if(!outptr) return NULL;
-        }
-        outptr = write_comp_byte((run_count & 0xFF), outptr, pastoutmem);
-        if(!outptr)
-            return NULL;
-    }
-
+    outptr = encode_count2(run_count, 7, outptr, pastoutmem);
     return outptr;
 }
 
@@ -183,7 +190,7 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
     if(!outptr)
         return NULL;
 
-    outptr = encode_count(seedrow_count, 3, outptr, pastoutmem);
+    outptr = encode_count2(seedrow_count, 3, outptr, pastoutmem);
     if(!outptr)
         return NULL;
 
@@ -207,8 +214,15 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
             color_ptr += 3;
         }
 
-        outptr = encode_count(run_count, 7, outptr, pastoutmem);
-        run_count %= 7;
+        run_count -= 7;
+        while(run_count > 0xFE) {
+            run_count -= 0xFF;
+            outptr = write_comp_byte(0xFF, outptr, pastoutmem);
+            if(!outptr) return NULL;
+        }
+        outptr = write_comp_byte((run_count & 0xFF), outptr, pastoutmem);
+        // outptr = encode_count(run_count, 7, outptr, pastoutmem);
+        //run_count %= 7;
         // TODO: figure out the run_count encoding loop with memcpy(color_ptr)
         if(!outptr)
             return NULL;
