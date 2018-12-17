@@ -293,7 +293,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
                     if(colidx + 1 >= uiLogicalImageWidth ||
                         memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx+3], 3)) {
-                        if(colidx && !memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx-3], 3)) {
+                        if(colidx && !memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx-3], 3)) {
                             location = 1;
                         } else {
                             if (memcmp(&cur_row[coldata_idx], cache, 3)) {
@@ -338,7 +338,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                         run_count = 0;
                         colidx++;
                         coldata_idx += 3;
-                        while(colidx+1 <= uiLogicalImageWidth &&
+                        while(colidx+1 < uiLogicalImageWidth &&
                               !memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
                             run_count++;
                             coldata_idx += 3;
