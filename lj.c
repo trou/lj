@@ -317,20 +317,30 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                     /* Looking for runs */
                     if(colidx + 1 >= uiLogicalImageWidth ||
                         memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
-                        printf("no run!\n");
                         /* No run found */
                         run_count = 0;
                         uint8_t *color_ptr = &cur_row[coldata_idx+3];
 
                         coldata_idx += 3;
                         colidx++;
-                        while(colidx+1 <= uiLogicalImageWidth &&
-                              memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3) &&
-                              memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx], 3)) {
-                            // TODO: make sure the while check is sound
-                            run_count++;
-                            colidx++;
-                            coldata_idx += 3;
+                        if(verbose) printf("no run! colidx=%x\n", colidx);
+                        loop:
+                        if(colidx < uiLogicalImageWidth) {
+                            if(colidx+1 >= uiLogicalImageWidth || memcmp(&cur_row[coldata_idx], &cur_row[coldata_idx+3], 3)) {
+                                if(colidx+1 >= uiLogicalImageWidth) {
+                                    run_count++;
+                                    colidx++;
+                                    coldata_idx += 3;
+                                    goto loop;
+                                } else {
+                                    if (memcmp(&cur_row[coldata_idx], &seedrow[coldata_idx], 3)) {
+                                        run_count++;
+                                        colidx++;
+                                        coldata_idx += 3;
+                                        goto loop;
+                                    }
+                                }
+                            }
                         }
                         pCompressedData = encode_literal(pCompressedData, pCompressedDataEnd, color_ptr,
                                                          location, seedrow_count, run_count, new_color);
