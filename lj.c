@@ -17,7 +17,7 @@ void init()
     }
 }
 
-void hexdump(char *prefix, uint8_t *buffer, int len)
+void hexdump(const char *prefix, uint8_t *buffer, int len)
 {
     if(verbose) printf("%s", prefix);
     for(int i=0; i<len; i++)
@@ -68,7 +68,7 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
 uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 {
-    if(verbose) printf("write_comp_byte[%lx]: %d / 0x%02x\n", outptr-orig, val, val);
+    if(verbose) printf("write_comp_byte[%lx]: %d / 0x%02x\n", (unsigned long)(outptr-orig), val, val);
     if(outptr >= pastoutmem)
         return NULL;
     *outptr++ = val;
@@ -272,7 +272,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
     if(InputData)
     {
-        seedrow = malloc(3*uiLogicalImageWidth);
+        seedrow = (unsigned char *)malloc(3*uiLogicalImageWidth);
         if(seedrow)
         {
             memset(seedrow, 0xFF, 3*uiLogicalImageWidth);
