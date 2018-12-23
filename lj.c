@@ -6,8 +6,16 @@
 #include "hpjbig_wrapper.h"
 
 unsigned char *orig = NULL;
-int verbose = 1;
+int verbose = 0;
 
+
+void init()
+{
+    char *verbenv = getenv("LJ_VERB");
+    if(verbenv && atoi(verbenv) > 0) {
+        verbose = atoi(verbenv);
+    }
+}
 
 void hexdump(char *prefix, uint8_t *buffer, int len)
 {
