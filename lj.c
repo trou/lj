@@ -4,14 +4,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "hpjbig_wrapper.h"
+
 unsigned char *orig = NULL;
+int verbose = 1;
+
 
 void hexdump(char *prefix, uint8_t *buffer, int len)
 {
-    printf("%s", prefix);
+    if(verbose) printf("%s", prefix);
     for(int i=0; i<len; i++)
-        printf(" %02X", buffer[i]);
-    printf("\n");
+        if(verbose) printf(" %02X", buffer[i]);
+    if(verbose) printf("\n");
 }
 
 int hp_init_lib(int iFlags)
@@ -57,7 +60,7 @@ int hp_encode_bits_to_jbig(int iWidth, int iHeight, unsigned char **pBuff, HPLJZ
 uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 {
-    printf("write_comp_byte[%lx]: %d / 0x%02x\n", outptr-orig, val, val);
+    if(verbose) printf("write_comp_byte[%lx]: %d / 0x%02x\n", outptr-orig, val, val);
     if(outptr >= pastoutmem)
         return NULL;
     *outptr++ = val;
@@ -66,7 +69,7 @@ uint8_t *write_comp_byte(uint8_t val, uint8_t *outptr, uint8_t *pastoutmem)
 
 uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
 {
-    printf("encode_count(%d, %d)\n", count, over);
+    if(verbose) printf("encode_count(%d, %d)\n", count, over);
     /* TODO: verify it's sound */
     if(count >= over) {
         count -= over;
@@ -88,13 +91,13 @@ uint8_t *encode_count(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
             outptr = write_comp_byte((count&0xFF), outptr, pastoutmem);
         }
     }
-    printf("encode_count end\n");
+    if(verbose) printf("encode_count end\n");
     return outptr;
 }
 
 uint8_t *encode_count2(int count, int over, uint8_t *outptr, uint8_t *pastoutmem)
 {
-    printf("encode_count2(%d, %d)\n", count, over);
+    if(verbose) printf("encode_count2(%d, %d)\n", count, over);
     if (count >= over) {
         count -= over;
         while(count > 0xFE) {
@@ -106,7 +109,7 @@ uint8_t *encode_count2(int count, int over, uint8_t *outptr, uint8_t *pastoutmem
         if(!outptr)
             return NULL;
     }
-    printf("encode_count2 end\n");
+    if(verbose) printf("encode_count2 end\n");
     return outptr;
 }
 
@@ -114,7 +117,7 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
 {
     uint8_t byte;
 
-    printf("encode_seedcmd(%d)\n", repl_cnt);
+    if(verbose) printf("encode_seedcmd(%d)\n", repl_cnt);
     if(repl_cnt < 3) {
         byte = 0x80 | (8*repl_cnt);
     } else {
@@ -127,14 +130,14 @@ uint8_t *encode_seedcmd(uint8_t *outptr, uint8_t *pastoutmem, int repl_cnt)
         return NULL;
 
     outptr = encode_count2(repl_cnt, 3, outptr, pastoutmem);
-    printf("encode_seedcmd end\n");
+    if(verbose) printf("encode_seedcmd end\n");
     return outptr;
 }
 
 uint8_t *encode_runcmd(uint8_t *outptr, uint8_t *pastoutmem, int location, unsigned int seedrow_count, unsigned int run_count, uint8_t *new_color) {
     uint8_t byte;
 
-    printf("encode_runcmd(%d, %u, %u)\n", location, seedrow_count, run_count);
+    if(verbose) printf("encode_runcmd(%d, %u, %u)\n", location, seedrow_count, run_count);
     if ( seedrow_count <= 2 )
         byte = 8 * seedrow_count | 32 * location | 0x80;
     else
@@ -174,7 +177,7 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
 {
     uint8_t byte;
 
-    printf("encode_literal(%d, %u, %u)\n", location, seedrow_count, run_count);
+    if(verbose) printf("encode_literal(%d, %u, %u)\n", location, seedrow_count, run_count);
     hexdump("new_color:", new_color, 3);
 
     byte = 32 * location;
@@ -239,7 +242,7 @@ uint8_t *encode_literal(uint8_t *outptr, uint8_t *pastoutmem,
         color_ptr += 3;
     }
 
-    printf("encode_literal end\n");
+    if(verbose) printf("encode_literal end\n");
     return outptr;
 }
 
@@ -274,7 +277,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                 coldata_idx = 0;
                 while(colidx < uiLogicalImageWidth) {
                     seedrow_count = 0;
-                    printf("colidx: %x, coldata_idx: %x, lineidx=%x\n", colidx, coldata_idx, lineidx);
+                    if(verbose) printf("colidx: %x, coldata_idx: %x, lineidx=%x\n", colidx, coldata_idx, lineidx);
                     hexdump("currow:", &cur_row[coldata_idx], 10);
                     hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     while(colidx < uiLogicalImageWidth &&
@@ -307,8 +310,8 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
                         location = 2;
                     }
 
-                    printf("location: %d\n", location);
-                    printf("coldata_idx: %x\n", coldata_idx);
+                    if(verbose) printf("location: %d\n", location);
+                    if(verbose) printf("coldata_idx: %x\n", coldata_idx);
                     hexdump("currow:", &cur_row[coldata_idx], 10);
                     hexdump("seedrow:", &seedrow[coldata_idx], 10);
                     /* Looking for runs */
@@ -334,7 +337,7 @@ int HPJetReadyCompress(unsigned char   *pCompressedData,
 
                     } else {
                         /* Got a run ?*/
-                        printf("run: colidx=%x!\n", colidx);
+                        if(verbose) printf("run: colidx=%x!\n", colidx);
                         run_count = 0;
                         colidx++;
                         coldata_idx += 3;
